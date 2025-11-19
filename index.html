@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>West Territory 4 - BEGAWE</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out',
+                        'slide-up': 'slideUp 0.5s ease-out',
+                        'slide-up-fast': 'slideUp 0.3s ease-out',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { transform: 'translateY(20px)', opacity: '0' },
+                            '100%': { transform: 'translateY(0)', opacity: '1' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f8fafc;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        
+        /* Hide scrollbar utility */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "html2canvas": "https://aistudiocdn.com/html2canvas@^1.4.1",
+    "jspdf": "https://aistudiocdn.com/jspdf@^3.0.3"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- UTILS ---
+        const generateUUID = () => {
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        };
+
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZhZguj-635fHhMt-HX86JEvhoksbHX1sb5IOqpvS9ohGKnsBQVfqRKNhElhAXWpUa/exec";
+
+        // --- CONSTANTS ---
+        const AspectStatus = {
+            UNSELECTED: 0,
+            NEED_IMPROVEMENT: 1,
+            NO_NEED: 2,
+        };
+
+        const BRANCH_OPTIONS = [
+            'Branch Metro Hadimulyo Barat', 'Branch Bandar Lampung Tanjung Senang', 'Branch Lampung Tengah Bandar Jaya',
+            'Branch Lampung Selatan Kalianda', 'Branch Bandar Lampung Rawa Laut', 'Branch Bandar Lampung Rajabasa',
+            'Branch Mesuji Umbulan Tedunggeram', 'Branch Bandar Bandar Lampung Campang Raya', 'Branch Tulang Bawang Barat Banjar Agung',
+            'Branch Tulang Bawang Barat Menggala', 'Branch Jambi Kenali Asam Bawah', 'Branch Jambi Kenali Besar',
+            'Branch Jambi Thehok', 'Branch Bengkulu Jembatan Kecil', 'Branch Muaro Jambi Sengeti',
+            'Branch Tanjung Jabung Barat Kuala Tungkal', 'Branch Tanjung Jabung Barat Merlung', 'Branch Banyuasin Pangkalan Balai',
+            'Branch Banyuasin Betung', 'Branch Banyuasin Sungsang', 'Branch Bangka Sungai Liat',
+            'Branch Bangka Barat Kelapa', 'Branch Bangka Barat Muntok', 'Branch Musi Banyausin Bayung Lecir',
+            'Branch Musi Banyuasin Pangkalan Gresik', 'Branch Musi Banyuasin Sungai Lilin', 'Branch Ogan Komering Ilir Kayu Agung',
+            'Branch Ogan Komering Ilir Tugu Mulyo', 'Branch Palembang 8 Ulu', 'Branch Palembang Kalidoni',
+            'Branch Palembang Karya Jaya', 'Branch Palembang Sekip Jaya', 'Branch Palembang Sukamaju',
+            'Branch Palembang Sukodadi', 'Branch Pangkal Pinang Batin Tikal'
+        ];
+
+        const VISITOR_OPTIONS = [
+            'Dedi Riyanto', 'Made Marsha Bayu Kresna', 'Piscesco Heyziputra', 'Chandri Apriasma Putra', 
+            'Tommy Setiawan', 'Muhammad Harriansyah', 'Boby Kertapati', 'Danang Miftaqur Anam', 
+            'Adam Harahap', 'Faisal Anggara', 'Novianto', 'Adi Febriansyah', 'Gerry Boy',
+            'Bayu Prakoso', 'Nuke Utami', 'Muhammad Okyaki', 'Nurul Hakim', 'Bima Saputro', 
+            'Yoga', 'Muhammad Bangga Pribadi', 'Muhammad Tasil'
+        ];
+
+        const INITIAL_ASPECTS = [
+            { id: 'branchCondition', title: 'Branch Condition', status: AspectStatus.UNSELECTED, description: '', placeholder: 'e.g., Wallpaper peeling, AC not working, dirty floor...' },
+            { id: 'sop', title: 'S.O.P Adherence', status: AspectStatus.UNSELECTED, description: '', placeholder: 'e.g., Team late, no uniform, greeting procedure missed...' },
+            { id: 'salesKnowledge', title: 'Product Knowledge', status: AspectStatus.UNSELECTED, description: '', placeholder: 'e.g., Team unsure about new promo packages...' },
+            { id: 'atl', title: 'Branding / ATL', status: AspectStatus.UNSELECTED, description: '', placeholder: 'e.g., Banner missing on main road, sticker faded...' },
+        ];
+
+        // --- LOGIC ---
+        function generateSummary(ratings) {
+            const { speed, stability, support, price, overall } = ratings;
+            const values = Object.values(ratings);
+            
+            if (values.every(r => r === 0)) {
+                return "Please provide ratings to generate an automatic summary.";
+            }
+
+            let text = [];
+            const avg = values.reduce((a, b) => a + b, 0) / values.length;
+
+            // Speed
+            if (speed <= 2) text.push(`<span class="text-red-600 font-bold">Pelanggan merasa kecepatan internet sangat lambat.</span>`);
+            else if (speed === 3) text.push(`Kecepatan internet dirasa cukup baik, namun kadang melambat.`);
+            else text.push(`Kecepatan internet dinilai cepat dan memuaskan.`);
+
+            // Stability
+            if (stability <= 2) text.push(`<span class="text-red-600 font-bold">Koneksi sering tidak stabil/RTO.</span>`);
+            else if (stability === 3) text.push(`Koneksi cukup stabil, gangguan minor.`);
+            else text.push(`Koneksi internet sangat stabil.`);
+
+            // Support
+            if (support <= 2) text.push(`<span class="text-red-600 font-bold">Layanan support lambat respon.</span>`);
+            else if (support === 3) text.push(`Layanan support cukup responsif.`);
+            else text.push(`Layanan support sangat membantu dan ramah.`);
+
+            // Price
+            if (price <= 2) text.push(`<span class="text-red-600 font-bold">Harga terlalu mahal vs kualitas.</span>`);
+            else if (price === 3) text.push(`Harga standard.`);
+            else text.push(`Harga sangat worth it.`);
+
+            // Conclusion
+            let conclusion = "";
+            if (avg <= 2.5) conclusion = `<span class="text-red-600 font-bold block mt-2">KESIMPULAN: Kepuasan rendah. Perlu tindak lanjut segera.</span>`;
+            else if (avg < 4) conclusion = `<span class="text-gray-700 block mt-2">KESIMPULAN: Cukup puas, perlu maintenance rutin.</span>`;
+            else conclusion = `<span class="text-green-600 font-bold block mt-2">KESIMPULAN: Sangat Puas (Promoter).</span>`;
+
+            return text.join(" ") + " " + conclusion;
+        }
+
+        const sendDataToSheet = async (data) => {
+            try {
+                // Prepare lighter payload (exclude images) for Google Sheets
+                const payload = {
+                    date: data.date,
+                    visitor: data.visitorName,
+                    branch: data.branchName,
+                    includeInternal: data.includeInternal,
+                    aspects: data.includeInternal ? data.aspects : [],
+                    experiences: data.experiences.map(exp => ({
+                        billingAccount: exp.billingAccount,
+                        name: exp.name,
+                        ratings: exp.ratings,
+                        summary: exp.summary,
+                        // We intentionally exclude 'images' array containing base64 strings
+                    }))
+                };
+
+                await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Required for Google Apps Script Web Apps
+                    headers: {
+                        'Content-Type': 'text/plain', // CRITICAL CHANGE: Must be text/plain to avoid preflight
+                    },
+                    body: JSON.stringify(payload)
+                });
+                console.log("Data sent to Google Sheet successfully (no-cors mode).");
+                return true;
+            } catch (error) {
+                console.error("Error sending data to sheet:", error);
+                return false;
+            }
+        };
+
+        const generateAndSendReport = async (data) => {
+            try {
+                // 1. Send Data to Google Sheets (Background)
+                await sendDataToSheet(data); // Added await to ensure execution logic flow
+
+                const element = document.getElementById('report-preview-container');
+                if (!element) throw new Error("Report template not found");
+
+                // 2. Capture Canvas
+                const canvas = await html2canvas(element, { 
+                    scale: 2, 
+                    useCORS: true, 
+                    backgroundColor: '#ffffff',
+                    logging: false 
+                });
+
+                const imgData = canvas.toDataURL('image/png');
+                
+                // 3. Generate PDF
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'px',
+                    format: [canvas.width, canvas.height]
+                });
+
+                pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+                
+                // 4. Save
+                const filename = `Visit_${data.branchName.replace(/\s+/g, '_')}_${data.date}.pdf`;
+                pdf.save(filename);
+
+                // 5. Trigger Mailto
+                const subject = `Visitation Report: ${data.branchName} - ${data.date}`;
+                const body = `Dear Team,\n\nAttached is the visitation report for ${data.branchName} conducted on ${data.date} by ${data.visitorName}.\n\nSummary:\n${data.experiences.length} Customer(s) visited.\n\nRegards.`;
+                
+                window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                
+                return true;
+            } catch (error) {
+                console.error("PDF Generation Error:", error);
+                alert("Failed to generate report. Please ensure all images are loaded properly.");
+                return false;
+            }
+        };
+
+        // --- UI COMPONENTS ---
+
+        const Button = ({ children, variant = 'primary', isLoading, icon, className = '', disabled, ...props }) => {
+            const baseStyles = "inline-flex items-center justify-center px-5 py-2.5 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 shadow-sm";
+            
+            const variants = {
+                primary: "bg-brand-600 hover:bg-brand-700 text-white focus:ring-brand-500 hover:shadow-brand-500/20 hover:shadow-lg",
+                secondary: "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:text-gray-900 focus:ring-gray-200",
+                danger: "bg-red-50 text-red-600 hover:bg-red-100 focus:ring-red-500 border border-red-200",
+                ghost: "text-gray-500 hover:text-brand-600 hover:bg-brand-50"
+            };
+
+            return (
+                <button 
+                    className={`${baseStyles} ${variants[variant]} ${className}`}
+                    disabled={disabled || isLoading}
+                    {...props}
+                >
+                    {isLoading && (
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    )}
+                    {!isLoading && icon && <span className="mr-2">{icon}</span>}
+                    {children}
+                </button>
+            );
+        };
+
+        const Card = ({ children, className = '', title, action, onClick }) => {
+            return (
+                <div 
+                    className={`bg-white rounded-2xl border border-gray-200 shadow-sm transition-all duration-200 ${onClick ? 'cursor-pointer hover:shadow-md hover:border-brand-200' : ''} ${className}`}
+                    onClick={onClick}
+                >
+                    {(title || action) && (
+                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-gray-50 to-white rounded-t-2xl">
+                            {title && <h3 className="text-lg font-bold text-gray-800 tracking-tight">{title}</h3>}
+                            {action && <div>{action}</div>}
+                        </div>
+                    )}
+                    <div className="p-6">
+                        {children}
+                    </div>
+                </div>
+            );
+        };
+
+        const SearchableSelect = ({ options, value, onChange, placeholder, label }) => {
+            const [isOpen, setIsOpen] = useState(false);
+            const [searchTerm, setSearchTerm] = useState('');
+            const wrapperRef = useRef(null);
+
+            const filtered = options.filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase()));
+
+            useEffect(() => {
+                const handleClickOutside = (event) => {
+                    if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+                        setIsOpen(false);
+                    }
+                };
+                document.addEventListener('mousedown', handleClickOutside);
+                return () => document.removeEventListener('mousedown', handleClickOutside);
+            }, []);
+
+            const handleSelect = (opt) => {
+                onChange(opt);
+                setSearchTerm('');
+                setIsOpen(false);
+            };
+
+            return (
+                <div className="relative group" ref={wrapperRef}>
+                    {label && <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">{label}</label>}
+                    <div className="relative">
+                        <input
+                            type="text"
+                            readOnly={!isOpen}
+                            className={`w-full pl-4 pr-10 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all shadow-sm ${!value && !isOpen ? 'text-gray-400' : 'text-gray-900'}`}
+                            placeholder={placeholder}
+                            value={isOpen ? searchTerm : value}
+                            onFocus={() => setIsOpen(true)}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                if(!isOpen) setIsOpen(true);
+                            }}
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+                        </div>
+                    </div>
+                    
+                    {isOpen && (
+                        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-xl max-h-60 overflow-auto animate-fade-in">
+                            {filtered.length === 0 ? (
+                                <div className="px-4 py-3 text-sm text-gray-500">No results found</div>
+                            ) : (
+                                <ul className="py-1">
+                                    {filtered.map((opt, idx) => (
+                                        <li 
+                                            key={idx}
+                                            onClick={(e) => { e.stopPropagation(); handleSelect(opt); }}
+                                            className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${value === opt ? 'bg-brand-50 text-brand-700 font-medium' : 'text-gray-700 hover:bg-gray-50'}`}
+                                        >
+                                            {opt}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const CameraModal = ({ isOpen, onClose, onCapture }) => {
+            const videoRef = useRef(null);
+            const canvasRef = useRef(null);
+            const [stream, setStream] = useState(null);
+            const [error, setError] = useState('');
+            const [facingMode, setFacingMode] = useState('environment');
+
+            const startCamera = async () => {
+                try {
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                    }
+                    const newStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { facingMode: facingMode } 
+                    });
+                    setStream(newStream);
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = newStream;
+                    }
+                    setError('');
+                } catch (err) {
+                    console.error(err);
+                    setError('Camera access denied or unavailable.');
+                }
+            };
+
+            useEffect(() => {
+                if (isOpen) startCamera();
+                return () => {
+                    if (stream) stream.getTracks().forEach(track => track.stop());
+                };
+            }, [isOpen, facingMode]);
+
+            const handleCapture = () => {
+                if (videoRef.current && canvasRef.current) {
+                    const video = videoRef.current;
+                    const canvas = canvasRef.current;
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(video, 0, 0);
+                        const timestamp = new Date().toLocaleString();
+                        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+                        ctx.fillRect(0, canvas.height - 60, canvas.width, 60);
+                        ctx.fillStyle = 'white';
+                        ctx.font = '16px Arial';
+                        ctx.fillText(timestamp, 20, canvas.height - 25);
+                        
+                        // Try Geolocation
+                        try {
+                            navigator.geolocation.getCurrentPosition((pos) => {
+                                const loc = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
+                                ctx.fillText(loc, 20, canvas.height - 45);
+                                onCapture(canvas.toDataURL('image/jpeg', 0.8), loc);
+                                onClose();
+                            }, () => {
+                                onCapture(canvas.toDataURL('image/jpeg', 0.8));
+                                onClose();
+                            }, { timeout: 3000 });
+                        } catch (e) {
+                            onCapture(canvas.toDataURL('image/jpeg', 0.8));
+                            onClose();
+                        }
+                    }
+                }
+            };
+
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-4 animate-fade-in">
+                    <div className="relative w-full max-w-md bg-black rounded-3xl overflow-hidden shadow-2xl border border-gray-800">
+                        {error ? (
+                            <div className="p-10 text-center text-white">
+                                <p className="mb-4 text-red-400">{error}</p>
+                                <Button onClick={onClose} variant="secondary">Close</Button>
+                            </div>
+                        ) : (
+                            <>
+                                <video ref={videoRef} autoPlay playsInline className="w-full h-[65vh] object-cover" />
+                                <canvas ref={canvasRef} className="hidden" />
+                                
+                                <div className="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-black via-black/60 to-transparent flex items-center justify-between">
+                                    <button onClick={onClose} className="text-white p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    </button>
+                                    
+                                    <button onClick={handleCapture} className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center bg-white/20 hover:bg-white/40 transition-all active:scale-95 shadow-lg shadow-white/20">
+                                        <div className="w-16 h-16 bg-white rounded-full"></div>
+                                    </button>
+
+                                    <button onClick={() => setFacingMode(prev => prev === 'user' ? 'environment' : 'user')} className="text-white p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- SECTIONS ---
+
+        const StepOneBasic = ({ data, updateData }) => {
+            return (
+                <div className="max-w-2xl mx-auto animate-slide-up">
+                    <Card title="Visitation Details" className="mb-6 relative z-20">
+                        <div className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Visit Date</label>
+                                <input 
+                                    type="date" 
+                                    value={data.date}
+                                    onChange={(e) => updateData({ date: e.target.value })}
+                                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all shadow-sm text-gray-900"
+                                />
+                            </div>
+                            <SearchableSelect 
+                                label="Visitor Name"
+                                options={VISITOR_OPTIONS}
+                                value={data.visitorName}
+                                onChange={(val) => updateData({ visitorName: val })}
+                                placeholder="Search visitor..."
+                            />
+                            <SearchableSelect 
+                                label="Branch Name"
+                                options={BRANCH_OPTIONS}
+                                value={data.branchName}
+                                onChange={(val) => updateData({ branchName: val })}
+                                placeholder="Search branch..."
+                            />
+                        </div>
+                    </Card>
+
+                    <div onClick={() => updateData({ includeInternal: !data.includeInternal })}>
+                        <Card className="cursor-pointer group border-l-4 border-l-transparent hover:border-l-brand-500 relative z-10">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-lg font-bold text-gray-800 group-hover:text-brand-600 transition-colors">Internal Audit</h3>
+                                    <p className="text-sm text-gray-500 mt-1">Include branch condition & SOP checklist?</p>
+                                </div>
+                                <div className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors duration-300 ${data.includeInternal ? 'bg-brand-600' : 'bg-gray-200'}`}>
+                                    <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform duration-300 ${data.includeInternal ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                </div>
+                            </div>
+                        </Card>
+                    </div>
+                </div>
+            );
+        };
+
+        const StepTwoAspects = ({ data, updateData }) => {
+            const handleAspectChange = (id, field, value) => {
+                const newAspects = data.aspects.map(a => a.id === id ? { ...a, [field]: value } : a);
+                updateData({ aspects: newAspects });
+            };
+
+            return (
+                <div className="space-y-6 max-w-3xl mx-auto animate-slide-up">
+                    <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5 flex items-start gap-4">
+                        <div className="p-3 bg-blue-100 rounded-xl text-2xl">🏢</div>
+                        <div>
+                            <h4 className="font-bold text-blue-900 text-lg">Branch Audit</h4>
+                            <p className="text-sm text-blue-700 mt-1">Please evaluate the branch condition carefully based on current standards.</p>
+                        </div>
+                    </div>
+
+                    {data.aspects.map((aspect) => {
+                        const isNeedImprovement = aspect.status === AspectStatus.NEED_IMPROVEMENT;
+                        const isNoNeed = aspect.status === AspectStatus.NO_NEED;
+
+                        return (
+                            <Card key={aspect.id} className={`transition-all duration-300 ${isNeedImprovement ? 'border-l-4 border-l-red-500 ring-1 ring-red-100' : isNoNeed ? 'border-l-4 border-l-green-500 ring-1 ring-green-100' : ''}`}>
+                                <div className="md:flex md:justify-between md:items-start gap-8">
+                                    <div className="mb-4 md:mb-0 md:w-5/12">
+                                        <h3 className="text-lg font-bold text-gray-800 mb-3">{aspect.title}</h3>
+                                        <div className="flex flex-col space-y-2">
+                                            <label className={`flex items-center p-3 rounded-xl border cursor-pointer transition-all ${isNeedImprovement ? 'bg-red-50 border-red-200 text-red-700 font-semibold shadow-sm' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                                <input 
+                                                    type="radio" 
+                                                    name={`status-${aspect.id}`}
+                                                    checked={isNeedImprovement}
+                                                    onChange={() => handleAspectChange(aspect.id, 'status', AspectStatus.NEED_IMPROVEMENT)}
+                                                    className="w-5 h-5 text-red-600 focus:ring-red-500 border-gray-300"
+                                                />
+                                                <span className="ml-3">Need Improvement</span>
+                                            </label>
+                                            <label className={`flex items-center p-3 rounded-xl border cursor-pointer transition-all ${isNoNeed ? 'bg-green-50 border-green-200 text-green-700 font-semibold shadow-sm' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                                                <input 
+                                                    type="radio" 
+                                                    name={`status-${aspect.id}`}
+                                                    checked={isNoNeed}
+                                                    onChange={() => handleAspectChange(aspect.id, 'status', AspectStatus.NO_NEED)}
+                                                    className="w-5 h-5 text-green-600 focus:ring-green-500 border-gray-300"
+                                                />
+                                                <span className="ml-3">No Need</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    <div className="md:w-7/12">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Observations & Notes</label>
+                                        <textarea
+                                            value={aspect.description}
+                                            onChange={(e) => handleAspectChange(aspect.id, 'description', e.target.value)}
+                                            disabled={!isNeedImprovement}
+                                            placeholder={isNeedImprovement ? aspect.placeholder : "Select 'Need Improvement' to add details."}
+                                            className="w-full h-36 p-4 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-brand-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed resize-none transition-colors text-sm"
+                                        />
+                                    </div>
+                                </div>
+                            </Card>
+                        );
+                    })}
+                </div>
+            );
+        };
+
+        const StepThreeExperience = ({ data, updateData }) => {
+            const [cameraOpen, setCameraOpen] = useState(false);
+            const [activeExpId, setActiveExpId] = useState(null);
+            const [showSourceSelector, setShowSourceSelector] = useState(false);
+
+            const updateExperience = (id, updates) => {
+                const newExps = data.experiences.map(exp => {
+                    if (exp.id === id) {
+                        const updated = { ...exp, ...updates };
+                        if (updates.ratings) {
+                            updated.summary = generateSummary(updated.ratings);
+                        }
+                        return updated;
+                    }
+                    return exp;
+                });
+                updateData({ experiences: newExps });
+            };
+
+            const addExperience = () => {
+                const newExp = {
+                    id: generateUUID(),
+                    billingAccount: '',
+                    name: '',
+                    ratings: { speed: 0, stability: 0, support: 0, price: 0, overall: 0 },
+                    summary: 'Please provide ratings...',
+                    images: []
+                };
+                updateData({ experiences: [...data.experiences, newExp] });
+            };
+
+            const removeExperience = (id) => {
+                updateData({ experiences: data.experiences.filter(e => e.id !== id) });
+            };
+
+            const handleImageCapture = (src, location) => {
+                if (activeExpId) {
+                    const exp = data.experiences.find(e => e.id === activeExpId);
+                    if (exp) {
+                        const newImg = {
+                            id: generateUUID(),
+                            src,
+                            timestamp: new Date().toLocaleTimeString(),
+                            location
+                        };
+                        updateExperience(activeExpId, { images: [...exp.images, newImg] });
+                    }
+                }
+            };
+
+            const handleFileUpload = (e, expId) => {
+                if (e.target.files && e.target.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        if (evt.target && evt.target.result) {
+                            const newImg = {
+                                id: generateUUID(),
+                                src: evt.target.result,
+                                timestamp: new Date().toLocaleTimeString()
+                            };
+                            const newExps = data.experiences.map(x => x.id === expId ? { ...x, images: [...x.images, newImg] } : x);
+                            updateData({ experiences: newExps });
+                        }
+                    };
+                    reader.readAsDataURL(e.target.files[0]);
+                }
+            };
+            
+            const openSourceSelector = (expId) => {
+                setActiveExpId(expId);
+                setShowSourceSelector(true);
+            };
+
+            return (
+                <div className="space-y-8 max-w-4xl mx-auto animate-slide-up">
+                    {data.experiences.map((exp, index) => (
+                        <Card key={exp.id} className="border-t-4 border-t-brand-500" 
+                            title={`Customer #${index + 1}`}
+                            action={
+                                data.experiences.length > 1 && (
+                                    <button onClick={() => removeExperience(exp.id)} className="text-red-500 hover:text-red-700 text-sm font-medium px-3 py-1 rounded-lg hover:bg-red-50 transition-colors">
+                                        Remove
+                                    </button>
+                                )
+                            }
+                        >
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Billing Account</label>
+                                    <input 
+                                        type="text" 
+                                        value={exp.billingAccount}
+                                        onChange={(e) => updateExperience(exp.id, { billingAccount: e.target.value })}
+                                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all"
+                                        placeholder="ID Customer"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1.5 ml-1">Customer Name</label>
+                                    <input 
+                                        type="text" 
+                                        value={exp.name}
+                                        onChange={(e) => updateExperience(exp.id, { name: e.target.value })}
+                                        className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none transition-all"
+                                        placeholder="Full Name"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50/50 rounded-2xl p-6 mb-6 border border-gray-100">
+                                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-5">Service Quality Ratings</h4>
+                                <div className="space-y-5">
+                                    {Object.entries(exp.ratings).map(([key, val]) => (
+                                        <div key={key} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                            <span className="text-gray-700 font-medium capitalize text-sm w-1/3">
+                                                {key === 'overall' ? 'Overall Satisfaction' : key}
+                                            </span>
+                                            <div className="flex space-x-3">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <button
+                                                        key={star}
+                                                        type="button"
+                                                        onClick={() => updateExperience(exp.id, { ratings: { ...exp.ratings, [key]: star } })}
+                                                        className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 ${val >= star ? 'bg-yellow-400 text-white shadow-md scale-110' : 'bg-gray-200 text-gray-400 hover:bg-gray-300'}`}
+                                                    >
+                                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mb-8">
+                                <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">Analysis Summary</label>
+                                <div 
+                                    className="bg-blue-50/50 border border-blue-100 p-5 rounded-xl text-gray-700 text-sm leading-relaxed"
+                                    dangerouslySetInnerHTML={{ __html: exp.summary }}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-3 ml-1">Visitation Evidence</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                                    {exp.images.map((img) => (
+                                        <div key={img.id} className="group relative bg-gray-100 rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                                            <div className="relative">
+                                                <img src={img.src} className="w-full h-auto object-contain" alt="Evidence" />
+                                            </div>
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center h-full">
+                                                <button 
+                                                    onClick={() => {
+                                                        const newImages = exp.images.filter(i => i.id !== img.id);
+                                                        updateExperience(exp.id, { images: newImages });
+                                                    }}
+                                                    className="opacity-0 group-hover:opacity-100 bg-white text-red-500 p-2 rounded-full shadow-lg transition-all transform scale-75 group-hover:scale-100"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <button 
+                                    onClick={() => openSourceSelector(exp.id)}
+                                    className="w-full py-4 border-2 border-dashed border-brand-300 bg-brand-50 hover:bg-brand-100 hover:border-brand-400 rounded-2xl flex flex-col items-center justify-center text-brand-600 transition-all group"
+                                >
+                                    <div className="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                                    </div>
+                                    <span className="text-sm font-bold">Upload Evidence</span>
+                                </button>
+                            </div>
+                        </Card>
+                    ))}
+
+                    <div className="text-center pt-4 pb-10">
+                        <Button onClick={addExperience} variant="secondary" className="w-full sm:w-auto px-8 py-3" icon={<span className="text-lg font-bold">+</span>}>
+                            Add Another Customer
+                        </Button>
+                    </div>
+
+                    <CameraModal 
+                        isOpen={cameraOpen} 
+                        onClose={() => setCameraOpen(false)} 
+                        onCapture={handleImageCapture} 
+                    />
+                    
+                    {/* Source Selector Modal/Bottom Sheet */}
+                    {showSourceSelector && (
+                        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4 animate-fade-in" onClick={() => setShowSourceSelector(false)}>
+                            <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden animate-slide-up-fast" onClick={e => e.stopPropagation()}>
+                                <div className="p-4 text-center border-b border-gray-100">
+                                    <h3 className="font-bold text-gray-800">Add Photo</h3>
+                                    <p className="text-xs text-gray-500">Select a source for your evidence</p>
+                                </div>
+                                <div className="p-4 space-y-3">
+                                    <button onClick={() => { setShowSourceSelector(false); setCameraOpen(true); }} className="w-full flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors group">
+                                        <div className="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center mr-4 text-blue-500">
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="font-bold text-gray-800">Take Photo</div>
+                                            <div className="text-xs text-gray-500">Use camera with timestamp</div>
+                                        </div>
+                                    </button>
+                                    <label className="w-full flex items-center p-4 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer group">
+                                        <div className="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center mr-4 text-purple-500">
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="font-bold text-gray-800">From Album</div>
+                                            <div className="text-xs text-gray-500">Choose existing photo</div>
+                                        </div>
+                                        <input type="file" accept="image/*" className="hidden" onChange={(e) => { setShowSourceSelector(false); handleFileUpload(e, activeExpId); }} />
+                                    </label>
+                                </div>
+                                <div className="p-4 pt-0">
+                                    <button onClick={() => setShowSourceSelector(false)} className="w-full py-3 bg-white border border-gray-200 text-gray-700 font-bold rounded-xl hover:bg-gray-50">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // --- TEMPLATES ---
+
+        const HiddenReportTemplate = ({ data }) => {
+            const containerStyle = {
+                position: 'absolute',
+                top: '-10000px',
+                left: '-10000px',
+                width: '800px', // Fixed width suitable for A4 PDF scaling
+                zIndex: -1,
+                backgroundColor: 'white',
+                fontFamily: 'Helvetica, Arial, sans-serif', // System fonts render reliably in PDF
+                color: '#333',
+            };
+
+            return (
+                <div style={containerStyle}>
+                    <div id="report-preview-container" className="p-12 bg-white">
+                        {/* Document Header */}
+                        <div className="border-b-4 border-gray-800 pb-6 mb-10 flex justify-between items-start">
+                            <div>
+                                <h1 className="text-4xl font-bold text-gray-900 uppercase tracking-widest leading-tight">Visitation<br/>Report</h1>
+                                <div className="mt-3 text-gray-500 font-bold uppercase tracking-wide text-sm flex items-center gap-2">
+                                    <span className="bg-blue-700 text-white px-2 py-0.5 text-xs rounded-sm">W4</span>
+                                    <span>West Territory 4</span>
+                                </div>
+                            </div>
+                            <div className="text-right bg-gray-50 p-4 rounded border border-gray-200 min-w-[240px]">
+                                <div className="text-sm text-gray-600 space-y-2">
+                                    <div className="flex justify-between gap-4 border-b border-gray-200 pb-1">
+                                        <span className="font-bold text-gray-400 uppercase text-xs">Date</span>
+                                        <span className="font-bold text-gray-900">{new Date(data.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4 border-b border-gray-200 pb-1">
+                                        <span className="font-bold text-gray-400 uppercase text-xs">Visitor</span>
+                                        <span className="font-bold text-gray-900 text-right">{data.visitorName}</span>
+                                    </div>
+                                    <div className="flex justify-between gap-4">
+                                        <span className="font-bold text-gray-400 uppercase text-xs">Branch</span>
+                                        <span className="font-bold text-gray-900 text-right">{data.branchName}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 1: Internal Audit */}
+                        {data.includeInternal && (
+                            <div className="mb-12">
+                                <div className="flex items-center mb-4">
+                                    <h2 className="text-lg font-bold text-white bg-gray-800 px-4 py-1.5 uppercase tracking-wider">
+                                        1. Branch Audit
+                                    </h2>
+                                    <div className="h-0.5 bg-gray-800 flex-grow ml-2"></div>
+                                </div>
+                                
+                                <table className="w-full border-collapse border border-gray-300 text-sm shadow-sm">
+                                    <thead>
+                                        <tr className="bg-gray-100 text-left">
+                                            <th className="border border-gray-300 p-3 w-1/3 font-bold text-gray-700 uppercase text-xs tracking-wide">Aspect</th>
+                                            <th className="border border-gray-300 p-3 w-28 text-center font-bold text-gray-700 uppercase text-xs tracking-wide">Status</th>
+                                            <th className="border border-gray-300 p-3 font-bold text-gray-700 uppercase text-xs tracking-wide">Notes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {data.aspects.map(a => (
+                                            <tr key={a.id} className="even:bg-gray-50/50">
+                                                <td className="border border-gray-300 p-3 font-semibold text-gray-800">{a.title}</td>
+                                                <td className="border border-gray-300 p-3 text-center align-middle">
+                                                    {a.status === AspectStatus.NEED_IMPROVEMENT ? (
+                                                        <span className="inline-block text-red-700 font-bold text-[10px] border border-red-300 bg-red-50 px-2 py-1 rounded uppercase">Improve</span>
+                                                    ) : a.status === AspectStatus.NO_NEED ? (
+                                                        <span className="inline-block text-green-700 font-bold text-[10px] border border-green-300 bg-green-50 px-2 py-1 rounded uppercase">Good</span>
+                                                    ) : <span className="text-gray-300">-</span>}
+                                                </td>
+                                                <td className="border border-gray-300 p-3 text-gray-600 text-sm leading-relaxed">
+                                                    {a.status === AspectStatus.NEED_IMPROVEMENT ? a.description : <span className="text-gray-400 italic text-xs">No issues reported</span>}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* Section 2: Customer Experience */}
+                        <div>
+                            <div className="flex items-center mb-6">
+                                <h2 className="text-lg font-bold text-white bg-gray-800 px-4 py-1.5 uppercase tracking-wider">
+                                    {data.includeInternal ? '2. Customer Experience' : '1. Customer Experience'}
+                                </h2>
+                                <div className="h-0.5 bg-gray-800 flex-grow ml-2"></div>
+                            </div>
+                            
+                            <div className="space-y-8">
+                                {data.experiences.map((exp, i) => (
+                                    <div key={exp.id} className="border border-gray-300 break-inside-avoid bg-white shadow-sm">
+                                        {/* Customer Header */}
+                                        <div className="bg-gray-100 p-4 border-b border-gray-300 flex justify-between items-center">
+                                            <div className="flex items-center gap-3">
+                                                <span className="flex items-center justify-center w-6 h-6 bg-gray-800 text-white rounded text-xs font-bold">{i+1}</span>
+                                                <h3 className="font-bold text-gray-900 text-lg">{exp.name}</h3>
+                                            </div>
+                                            <div className="font-mono text-xs text-gray-600 bg-white px-2 py-1 border border-gray-300 rounded">
+                                                ID: <b>{exp.billingAccount}</b>
+                                            </div>
+                                        </div>
+
+                                        <div className="p-5">
+                                            {/* Content Columns */}
+                                            <div className="flex gap-8 mb-6">
+                                                {/* Ratings */}
+                                                <div className="w-1/2 flex-shrink-0">
+                                                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-200 pb-1">Performance Ratings</h4>
+                                                    <table className="w-full text-sm">
+                                                        <tbody>
+                                                            {[
+                                                                ['Internet Speed', exp.ratings.speed],
+                                                                ['Connection Stability', exp.ratings.stability],
+                                                                ['Customer Support', exp.ratings.support],
+                                                                ['Price Value', exp.ratings.price],
+                                                                ['Overall Satisfaction', exp.ratings.overall],
+                                                            ].map(([label, score]) => (
+                                                                <tr key={label}>
+                                                                    <td className="py-1.5 text-gray-600 font-medium">{label}</td>
+                                                                    <td className="py-1.5 text-right font-bold text-yellow-500" style={{ letterSpacing: '2px', fontSize: '14px' }}>
+                                                                        {'★'.repeat(score)}{'☆'.repeat(5-score)}
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                {/* Summary */}
+                                                <div className="w-1/2">
+                                                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3 border-b border-gray-200 pb-1">Automated Summary</h4>
+                                                    <div 
+                                                        className="text-xs text-gray-700 leading-relaxed bg-blue-50/50 p-3 border border-blue-100 rounded text-justify"
+                                                        dangerouslySetInnerHTML={{__html: exp.summary || '<span class="text-gray-400 italic">No summary available.</span>'}} 
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Images Grid */}
+                                            {exp.images.length > 0 && (
+                                                <div className="border-t border-gray-200 pt-4">
+                                                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Documentation</h4>
+                                                    <div className="grid grid-cols-2 gap-4 items-start">
+                                                        {exp.images.map((img, idx) => (
+                                                            <div key={idx} className="border border-gray-200 p-1.5 bg-white shadow-sm rounded">
+                                                                <img 
+                                                                    src={img.src} 
+                                                                    style={{ 
+                                                                        display: 'block',
+                                                                        width: '100%', 
+                                                                        height: 'auto', 
+                                                                        borderRadius: '2px' 
+                                                                    }} 
+                                                                    alt={`Evidence ${idx+1}`}
+                                                                />
+                                                                <div className="mt-2 flex justify-between items-end px-1 pb-1 border-t border-gray-100 pt-1">
+                                                                    <span className="text-[9px] text-gray-500 font-mono">{img.timestamp}</span>
+                                                                    {img.location && <span className="text-[9px] text-blue-600 font-mono max-w-[60%] truncate">{img.location}</span>}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-16 pt-6 border-t border-gray-300 text-center flex justify-between items-center">
+                            <div className="text-[10px] text-gray-400 uppercase tracking-widest">Confidential Document</div>
+                            <div className="text-[10px] text-gray-400 uppercase tracking-widest">Generated by west4</div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+
+        const App = () => {
+            const [currentTab, setCurrentTab] = useState('basic');
+            const [isSubmitting, setIsSubmitting] = useState(false);
+            
+            const [data, setData] = useState({
+                date: new Date().toISOString().split('T')[0],
+                visitorName: '',
+                branchName: '',
+                includeInternal: false,
+                aspects: INITIAL_ASPECTS,
+                experiences: [{
+                    id: generateUUID(),
+                    billingAccount: '',
+                    name: '',
+                    ratings: { speed: 0, stability: 0, support: 0, price: 0, overall: 0 },
+                    summary: 'Please provide ratings...',
+                    images: []
+                }]
+            });
+
+            const updateData = (updates) => {
+                setData(prev => ({ ...prev, ...updates }));
+            };
+
+            const tabs = [
+                { id: 'basic', label: 'Overview', icon: '📝' },
+                { id: 'internal', label: 'Audit', icon: '🏢', hidden: !data.includeInternal },
+                { id: 'customer', label: 'Customers', icon: '👥' },
+            ];
+
+            const filteredTabs = tabs.filter(t => !t.hidden);
+            const currentTabIndex = filteredTabs.findIndex(t => t.id === currentTab);
+
+            const canProceed = () => {
+                if (currentTab === 'basic') return data.date && data.visitorName && data.branchName;
+                if (currentTab === 'internal') return data.aspects.every(a => a.status !== AspectStatus.UNSELECTED);
+                if (currentTab === 'customer') return data.experiences.every(e => e.name && e.billingAccount && e.images.length > 0);
+                return true;
+            };
+
+            const handleNext = () => {
+                if (currentTabIndex < filteredTabs.length - 1) {
+                    setCurrentTab(filteredTabs[currentTabIndex + 1].id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    handleSubmit();
+                }
+            };
+
+            const handleSubmit = async () => {
+                if(!confirm("Ready to generate report?")) return;
+                setIsSubmitting(true);
+                const success = await generateAndSendReport(data);
+                setIsSubmitting(false);
+            };
+
+            return (
+                <div className="min-h-screen pb-24 relative">
+                    {/* Header */}
+                    <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-30">
+                        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl shadow-lg shadow-brand-500/30 flex items-center justify-center text-white font-extrabold text-lg">W4</div>
+                                <div>
+                                    <h1 className="text-lg font-bold text-gray-900 tracking-tight leading-none">Leader<span className="text-brand-600">Onsite</span></h1>
+                                    <span className="text-xs text-gray-500 font-medium">West Territory 4</span>
+                                </div>
+                            </div>
+                            <div className="hidden sm:block">
+                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">Online</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Progress Steps */}
+                    <div className="max-w-3xl mx-auto px-4 py-8">
+                        <nav aria-label="Progress">
+                            <ol role="list" className="flex items-center w-full">
+                                {filteredTabs.map((tab, index) => {
+                                    const isActive = tab.id === currentTab;
+                                    const isCompleted = filteredTabs.indexOf(tab) < currentTabIndex;
+                                    const isLast = index === filteredTabs.length - 1;
+
+                                    return (
+                                        <li key={tab.id} className={`relative ${!isLast ? 'flex-1' : ''}`}>
+                                            {!isLast && (
+                                                <div className="absolute top-5 left-0 w-full pl-10 -ml-2" aria-hidden="true">
+                                                    <div className={`h-1 rounded-full transition-all duration-500 ${isCompleted ? 'bg-brand-500' : 'bg-gray-200'}`} />
+                                                </div>
+                                            )}
+                                            <div 
+                                                className="group relative flex flex-col items-center cursor-pointer z-10" 
+                                                onClick={() => (isCompleted || isActive) && setCurrentTab(tab.id)}
+                                            >
+                                                <span className={`h-10 w-10 flex items-center justify-center rounded-full text-lg transition-all duration-300 shadow-sm ${isActive ? 'bg-brand-600 text-white ring-4 ring-brand-100 scale-110' : isCompleted ? 'bg-brand-600 text-white' : 'bg-white border-2 border-gray-200 text-gray-400'}`}>
+                                                    {isCompleted ? '✓' : tab.icon}
+                                                </span>
+                                                <span className={`mt-2 text-xs font-bold uppercase tracking-wider transition-colors ${isActive ? 'text-brand-700' : 'text-gray-400'}`}>{tab.label}</span>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+                        </nav>
+                    </div>
+
+                    {/* Main Content */}
+                    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                        {currentTab === 'basic' && <StepOneBasic data={data} updateData={updateData} />}
+                        {currentTab === 'internal' && <StepTwoAspects data={data} updateData={updateData} />}
+                        {currentTab === 'customer' && <StepThreeExperience data={data} updateData={updateData} />}
+                    </main>
+
+                    {/* Footer Actions */}
+                    <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 z-40 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)]">
+                        <div className="max-w-4xl mx-auto flex justify-between items-center gap-4">
+                            <Button 
+                                variant="secondary" 
+                                onClick={() => {
+                                    const prevIndex = currentTabIndex - 1;
+                                    if (prevIndex >= 0) setCurrentTab(filteredTabs[prevIndex].id);
+                                }}
+                                disabled={currentTabIndex === 0}
+                                className="flex-1 sm:flex-none sm:w-32"
+                            >
+                                Back
+                            </Button>
+                            
+                            <div className="text-sm text-gray-500 hidden sm:block font-medium animate-pulse">
+                                {canProceed() ? 'Ready to continue' : 'Complete required fields'}
+                            </div>
+
+                            <Button 
+                                variant="primary"
+                                onClick={handleNext}
+                                disabled={!canProceed()}
+                                isLoading={isSubmitting}
+                                className="flex-1 sm:flex-none sm:w-40 shadow-brand-500/30 shadow-lg"
+                            >
+                                {currentTabIndex === filteredTabs.length - 1 ? 'Generate Report' : 'Next Step'}
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Hidden Template for PDF */}
+                    <HiddenReportTemplate data={data} />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
